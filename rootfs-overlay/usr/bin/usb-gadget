@@ -1,0 +1,86 @@
+#!/usr/bin/env sh
+set -e
+
+ENABLE_NETWORKING=true
+ENABLE_SERIAL=true
+
+modprobe libcomposite
+
+cd /sys/kernel/config/usb_gadget/
+mkdir -p multigadget
+cd multigadget
+
+# USB DEVICE CONFIGURATION
+###########################
+echo 0x1d6b > idVendor  # Linux Foundation
+echo 0x0104 > idProduct # Multifunction Composite Gadget
+
+# USB CONNECTION CONFIGURATION
+###############################
+echo 0x0106 > bcdDevice       # Device release number: 1.06
+echo 0x0200 > bcdUSB          # USB 2.0
+echo 0x02   > bDeviceClass    # Networking Device Class
+echo 0x00   > bDeviceSubClass # Common Sub Class
+echo 0x01   > bDeviceProtocol # Interface Association Descriptor
+echo 0x40   > bMaxPacketSize0 # 64
+
+LANGUAGE=0x409 # English
+
+mkdir -p strings/$LANGUAGE
+echo fedcba9876543210                  > strings/$LANGUAGE/serialnumber
+echo Raspberry                         > strings/$LANGUAGE/manufacturer
+echo "RaspberryPi Multi-Gadget Device" > strings/$LANGUAGE/product
+
+
+# CONFIG 1
+###########
+mkdir -p configs/c.1/strings/$LANGUAGE
+echo RNDIS > configs/c.1/strings/$LANGUAGE/configuration # USB Device Functions
+echo 250   > configs/c.1/MaxPower                        # 250 mA
+
+ln -s configs/c.1 os_desc
+
+
+# Microsoft OS Descriptors
+###########################
+echo 1       > os_desc/use
+echo 0xcd    > os_desc/b_vendor_code # Microsoft
+echo MSFT100 > os_desc/qw_sign
+
+# Ethernet
+###########
+if [ "$ENABLE_NETWORKING" = true ]; then
+  echo 'Enabling USB Ethernet...' | systemd-cat
+  mkdir -p functions/rndis.usb0
+
+  echo RNDIS               > functions/rndis.usb0/os_desc/interface.rndis/compatible_id     # Matches Windows RNDIS Drivers
+  echo 5162001             > functions/rndis.usb0/os_desc/interface.rndis/sub_compatible_id # Matches Windows RNDIS 6.0 Driver
+
+  ln -s functions/rndis.usb0 configs/c.1/
+
+  echo 'Enabled USB Ethernet' | systemd-cat
+fi
+
+# Force Windows to re-read the descriptors.
+echo 0xEF > bDeviceClass    # Composite Device Class
+echo 0x02 > bDeviceSubClass # Composite Device Sub Class
+
+# Serial
+#########
+if [ "$ENABLE_SERIAL" = true ]; then
+  echo 'Enabling USB Serial...' | systemd-cat
+  mkdir -p functions/acm.usb0
+
+  ln -s functions/acm.usb0 configs/c.1/
+
+  systemctl enable getty@ttyGS0.service
+  echo 'Enabled USB Serial' | systemd-cat
+fi
+
+#################
+# End functions #
+#################
+# Power on the gadget.
+echo 'Enabling USB Gadget...' | systemd-cat
+ls /sys/class/udc > UDC
+echo 'Enabled USB Gadget' | systemd-cat

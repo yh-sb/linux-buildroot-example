@@ -1,0 +1,24 @@
+{
+    "tasks":
+    [
+        {
+            "label": "login",
+            "type": "shell",
+            "command": "( echo root && sleep 0.4 ) | tee -a /dev/ttyUSB0",
+            "presentation": { "reveal": "silent" }
+        },
+        {
+            "label": "gdbserver app",
+            "type": "shell",
+            "command": "( echo \"gdbserver :2000 app &\" ) | tee -a /dev/ttyUSB0",
+            "problemMatcher": ["$gcc"],
+            "presentation": { "showReuseMessage": false, "clear": true, "reveal": "silent" },
+            "dependsOn": ["login"]
+        },
+        {
+            "label": "hide terminal",
+            "command": "${command:workbench.action.togglePanel}"
+        }
+    ],
+    "version": "2.0.0"
+}

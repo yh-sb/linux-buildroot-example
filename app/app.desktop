@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=app
+Comment=Example userspace app
+Exec=app %F
+Terminal=true
+Categories=Utility;
+Icon=icon

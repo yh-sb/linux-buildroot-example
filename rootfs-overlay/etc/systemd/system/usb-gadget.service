@@ -1,0 +1,12 @@
+[Unit]
+Description=USB gadget
+Requires=network-pre.target
+After=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=usb-gadget
+
+[Install]
+WantedBy=sysinit.target

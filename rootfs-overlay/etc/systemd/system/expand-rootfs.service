@@ -1,0 +1,14 @@
+[Unit]
+Description=Expand rootfs to the whole SD card on the first boot
+Requires=dev-mmcblk0.device
+Requires=dev-mmcblk0p2.device
+After=dev-mmcblk0.device
+After=dev-mmcblk0p2.device
+
+[Service]
+Type=oneshot
+ExecStart=sh -c 'parted /dev/mmcblk0 resizepart 2 32GB && resize2fs /dev/mmcblk0p2'
+ExecStartPost=systemctl disable expand-rootfs
+
+[Install]
+WantedBy=sysinit.target

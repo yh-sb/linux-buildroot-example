@@ -1,0 +1,15 @@
+{
+    "configurations":
+    [
+        {
+            "name": "linux-kernel",
+            "compileCommands": "linux/compile_commands.json",
+            "compilerPath": "buildroot/output/host/bin/aarch64-linux-gcc"
+        },
+        {
+            "name": "app",
+            "compileCommands": "app/build/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

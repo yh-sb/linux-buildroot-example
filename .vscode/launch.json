@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations":
+    [
+        {
+            "name": "app",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/app/build/app",
+            "cwd": "${workspaceFolder}/app/build",
+            "miDebuggerPath": "${workspaceFolder}/buildroot/output/host/bin/aarch64-linux-gdb",
+            "miDebuggerServerAddress": "10.1.1.1:2000",
+            "preLaunchTask": "gdbserver app",
+            "postDebugTask": "hide terminal",
+            "showDisplayString": true,
+            "visualizerFile": "${workspaceFolder}/.vscode/stl.gcc.natvis"
+        }
+    ]
+}
