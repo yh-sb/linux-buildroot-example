@@ -6,7 +6,7 @@ LINUX_CONFIG = bcm2711_defconfig
 .PHONY: buildroot linux kernel-modules app image update log ssh clean
 
 # Add Buildroot tools to PATH
-$(eval export PATH=$(PWD)/buildroot/output/host/bin:$(PWD)/buildroot/output/host/sbin:$(PATH))
+$(eval export PATH=$(CURDIR)/buildroot/output/host/bin:$(CURDIR)/buildroot/output/host/sbin:$(PATH))
 
 all: buildroot linux kernel-modules app image
 
@@ -16,12 +16,12 @@ buildroot:
 
 linux:
 	make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-linux- $(LINUX_CONFIG)
-	make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-linux- Image modules dtbs -j $(shell grep -c ^processor /proc/cpuinfo)
 	cd linux && ./scripts/clang-tools/gen_compile_commands.py
+	make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-linux- Image modules dtbs -j $(shell grep -c ^processor /proc/cpuinfo)
 #	Install kernel
 	install linux/arch/arm64/boot/Image buildroot/output/images
 #	Install kernel modules
-	make -C linux INSTALL_MOD_PATH=$(PWD)/buildroot/output/target/usr modules_install -j
+	make -C linux INSTALL_MOD_PATH=$(CURDIR)/buildroot/output/target/usr modules_install -j
 	rm -rf buildroot/output/target/usr/lib/modules/*/build buildroot/output/target/usr/lib/modules/*/source
 #	Install device tree
 	rm -rf buildroot/output/images/rpi-firmware/*.dtb buildroot/output/images/rpi-firmware/overlays/*.dtbo
@@ -29,21 +29,26 @@ linux:
 	install linux/arch/arm64/boot/dts/overlays/*.dtbo buildroot/output/images/rpi-firmware/overlays
 
 kernel-modules:
-	make -C kernel-modules/hello_world ARCH=arm64 CROSS_COMPILE=aarch64-linux- KERNELDIR=$(PWD)/linux BUILD_TYPE=$(BUILD_TYPE)
+	make -C kernel-modules/hello_world ARCH=arm64 CROSS_COMPILE=aarch64-linux- KERNELDIR=$(CURDIR)/linux BUILD_TYPE=$(BUILD_TYPE)
 	cp kernel-modules/hello_world/hello_world.ko buildroot/output/target/usr/lib/modules/*/
 
 app:
-	cmake -S app -Bapp/build -G Ninja -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) -DCMAKE_TOOLCHAIN_FILE=$(PWD)/buildroot/output/host/usr/share/buildroot/toolchainfile.cmake
+	cmake -S app -Bapp/build -G Ninja -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/buildroot/output/host/usr/share/buildroot/toolchainfile.cmake
 	cmake --build app/build -j
 	install -D app/build/app buildroot/output/target/usr/bin/app
 
 image:
-#	Rebuild buildroot to trigger rootfs overlay update
-	$(MAKE) buildroot
-	$(eval export BINARIES_DIR=$(PWD)/buildroot/output/images)
-	$(eval export BUILD_DIR=$(PWD)/buildroot/output/build)
-	./buildroot/board/raspberrypizero2w/post-image.sh
-	swugenerator create --sw-description sw-description --no-compress --no-encrypt --artifactory buildroot/output/images --swu-file buildroot/output/images/image.swu --loglevel DEBUG
+#	Trigger rootfs overlay update
+	make -C buildroot rootfs-ext2
+#	Create .img SD-Card image
+	rm -rf ./buildroot/output/build/genimage.tmp
+	genimage --rootpath $(shell mktemp -d) \
+		--tmppath ./buildroot/output/build/genimage.tmp \
+		--inputpath ./buildroot/output/images \
+		--outputpath ./buildroot/output/images \
+		--config ./buildroot-external/configs/genimage.cfg
+#	Create .swu image
+	swugenerator create --sw-description buildroot-external/configs/sw-description --no-compress --no-encrypt --artifactory buildroot/output/images --swu-file buildroot/output/images/image.swu --loglevel DEBUG
 
 update:
 	@chmod 600 rootfs-overlay/root/.ssh/raspberrypi.key

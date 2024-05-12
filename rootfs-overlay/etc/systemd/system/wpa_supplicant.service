@@ -6,7 +6,7 @@ Before=network.target
 Wants=network.target
 
 [Service]
-ExecStart=wpa_supplicant -c/etc/wpa_supplicant.conf -iwlan0
+ExecStart=wpa_supplicant -c /etc/wpa_supplicant.conf -iwlan0
 
 [Install]
 WantedBy=multi-user.target

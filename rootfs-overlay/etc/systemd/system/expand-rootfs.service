@@ -7,7 +7,7 @@ After=dev-mmcblk0p2.device
 
 [Service]
 Type=oneshot
-ExecStart=sh -c 'parted /dev/mmcblk0 resizepart 2 32GB && resize2fs /dev/mmcblk0p2'
+ExecStart=sh -c 'parted /dev/mmcblk0 resizepart 2 100% && resize2fs /dev/mmcblk0p2'
 ExecStartPost=systemctl disable expand-rootfs
 
 [Install]
