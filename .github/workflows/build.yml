@@ -1,10 +1,24 @@
 name: build
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+      - '.dockerignore'
+      - '.gitattributes'
+      - '.gitignore'
+      - '.vscode/**'
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - '.dockerignore'
+      - '.gitattributes'
+      - '.gitignore'
+      - '.vscode/**'
 
 jobs:
   arm-image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Install dependencies
         run: |
@@ -12,7 +26,7 @@ jobs:
           sudo apt install bison cmake flex g++ gdb make ninja-build unzip libssl-dev
 
       - name: Checkout with submodules
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -28,7 +42,7 @@ jobs:
         run: echo "git_suffix=$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sdcard.img-${{env.git_suffix}}
           path: |
@@ -37,7 +51,7 @@ jobs:
           if-no-files-found: error
 
   native-app-linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Install dependencies
         run: |
@@ -45,10 +59,10 @@ jobs:
           sudo apt install cmake g++ ninja-build libfuse2
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache linuxdeploy
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: cache
         with:
           key: ${{ runner.OS }}-cache-${{ hashFiles('.github/workflows/build.yml') }}
@@ -58,7 +72,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/bin && cd $_
-          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20230713-1/linuxdeploy-x86_64.AppImage -O linuxdeploy.AppImage
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage -O linuxdeploy.AppImage
           chmod +x linuxdeploy.AppImage
 
       - name: Build
@@ -83,7 +97,7 @@ jobs:
           mv *.AppImage $(basename *.AppImage .AppImage)-${{env.git_suffix}}.AppImage
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: app-linux-${{env.git_suffix}}
           path: app/build/install/*
@@ -93,10 +107,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: cache
         with:
           key: ${{ runner.OS }}-cache-${{ hashFiles('.github/workflows/build.yml') }}
@@ -105,14 +119,15 @@ jobs:
       - name: Install MinGW-w64 (if cache not found)
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          curl.exe -L https://github.com/brechtsanders/winlibs_mingw/releases/download/13.2.0-16.0.6-11.0.0-ucrt-r1/winlibs-x86_64-posix-seh-gcc-13.2.0-mingw-w64ucrt-11.0.0-r1.zip -o mingw64.zip
-          tar -xf mingw64.zip -C C:\
+          curl.exe -L https://github.com/brechtsanders/winlibs_mingw/releases/download/15.2.0posix-13.0.0-ucrt-r5/winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64ucrt-13.0.0-r5.7z -o mingw64.7z
+          Expand-7zipArchive -Path mingw64.7z -DestinationPath C:\
           Copy-Item C:\mingw64\bin\mingw32-make.exe C:\mingw64\bin\make.exe
 
+      - name: Add build tools to PATH
+        run: echo "C:/mingw64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Build
-        run: |
-          $env:Path = "C:\mingw64\bin;" + $env:Path
-          make -C app
+        run: make -C app
 
       - name: Set artifacts suffix (if tag)
         if: startsWith(github.ref, 'refs/tags/') == true
@@ -128,7 +143,7 @@ jobs:
           ren app.exe app-${{env.git_suffix}}.exe
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: app-windows-${{env.git_suffix}}
           path: app/build/app-${{env.git_suffix}}.exe
