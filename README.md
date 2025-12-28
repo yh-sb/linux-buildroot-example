@@ -14,6 +14,9 @@ sudo apt install autoconf bc bzip2 bison cmake flex g++ gdb make ninja-build unz
 git clone --recursive https://github.com/yh-sb/linux-buildroot-example.git
 cd linux-buildroot-example
 make
+
+# Or build everything in Docker (useful for macOS)
+make docker
 ```
 Find image here: `buildroot/output/images/sdcard.img`
 ***Note:** if you need to update only userspace app, use: `make update`. It will update app via ssh over USB*
